@@ -6,13 +6,13 @@ import difflib
 # -----------------------------------
 # Streamlit Page Config
 # -----------------------------------
-st.set_page_config(page_title="Project Samarth - Agriculture & Climate Insights", layout="centered")
+st.set_page_config(page_title="🌾 Project Samarth - Smart Agriculture Chatbot", layout="centered")
 
 # -----------------------------------
 # Dataset Paths
 # -----------------------------------
-AGRI_PATH = "crop.xlsx"       # Excel file
-RAINFALL_PATH = "rainfall.csv"  # CSV file
+AGRI_PATH = "crop.xlsx"        # Excel file (Agriculture)
+RAINFALL_PATH = "rainfall.csv" # CSV file (Rainfall)
 
 # -----------------------------------
 # Load Datasets
@@ -33,156 +33,140 @@ def load_data():
 
     return agri, rain
 
-
 agri_df, rain_df = load_data()
 
 if agri_df.empty or rain_df.empty:
     st.warning("⚠️ One or both datasets failed to load. Please check file paths and formats.")
 else:
-    # Normalize column names (trim spaces)
-    agri_df.columns = [c.strip() for c in agri_df.columns]
-    rain_df.columns = [c.strip() for c in rain_df.columns]
+    st.success("✅ Datasets loaded successfully!")
 
-    # -----------------------------------
-    # Helper Functions
-    # -----------------------------------
-    STATES = sorted(agri_df['State'].dropna().unique())
+# Normalize column names
+agri_df.columns = [c.strip().title() for c in agri_df.columns]
+rain_df.columns = [c.strip().upper() for c in rain_df.columns]
 
-    def fuzzy_match_state(name):
-        matches = difflib.get_close_matches(name, STATES, n=1, cutoff=0.6)
-        return matches[0] if matches else None
+# -----------------------------------
+# Helper Functions
+# -----------------------------------
+STATES = sorted(agri_df['State'].dropna().unique())
 
-    def extract_states(query):
-        found = []
-        for s in STATES:
-            if s.lower() in query.lower():
-                found.append(s)
-        if not found:
-            tokens = re.findall(r"[A-Z][a-z]+", query)
-            for t in tokens:
-                match = fuzzy_match_state(t)
-                if match:
-                    found.append(match)
-        return list(set(found))
+def fuzzy_match_state(name):
+    matches = difflib.get_close_matches(name, STATES, n=1, cutoff=0.6)
+    return matches[0] if matches else None
 
-    def extract_crop(query):
-        crops = agri_df['Crop'].dropna().unique()
-        for c in crops:
-            if c.lower() in query.lower():
-                return c
-        return None
+def extract_state(query):
+    for s in STATES:
+        if s.lower() in query.lower():
+            return s
+    words = query.split()
+    for w in words:
+        match = fuzzy_match_state(w.title())
+        if match:
+            return match
+    return None
 
-    def extract_top_n(query):
-        m = re.search(r"top\s*(\d+)", query.lower())
-        return int(m.group(1)) if m else 3
+def extract_crop(query):
+    crops = agri_df['Crop'].dropna().unique()
+    for c in crops:
+        if c.lower() in query.lower():
+            return c
+    return None
 
-    def extract_year(query):
-        years = re.findall(r"(20\d{2})", query)
-        if years:
-            return int(years[-1])
-        return int(agri_df["Crop_Year"].max())
+def extract_year(query):
+    year_match = re.search(r"(19|20)\d{2}", query)
+    if year_match:
+        return int(year_match.group(0))
+    return int(agri_df['Crop_Year'].max())
 
-    # -----------------------------------
-    # Core Q&A Logic
-    # -----------------------------------
-    def answer_query(query):
-        states = extract_states(query)
-        crop = extract_crop(query)
-        top_n = extract_top_n(query)
-        year = extract_year(query)
+def extract_top_n(query):
+    match = re.search(r"top\s*(\d+)", query.lower())
+    return int(match.group(1)) if match else 3
 
-        if not states:
-            return "⚠️ Please mention at least one state in your query.", ""
+def detect_category(query):
+    q = query.lower()
+    if any(word in q for word in ["rain", "rainfall", "precipitation", "climate"]):
+        return "rainfall"
+    elif any(word in q for word in ["crop", "production", "yield", "harvest", "farm"]):
+        return "crop"
+    else:
+        return "unknown"
 
-        answer_lines = []
-        provenance = []
+# -----------------------------------
+# Core Q&A Logic
+# -----------------------------------
+def answer_query(query):
+    state = extract_state(query)
+    crop = extract_crop(query)
+    year = extract_year(query)
+    top_n = extract_top_n(query)
+    category = detect_category(query)
 
-        # ----- RAINFALL DATA -----
-        if not rain_df.empty and "SUBDIVISION" in rain_df.columns:
-            for s in states:
-                sub_match = difflib.get_close_matches(s, rain_df["SUBDIVISION"].astype(str), n=1, cutoff=0.5)
-                if sub_match:
-                    sub = sub_match[0]
-                    subset = rain_df[rain_df["SUBDIVISION"] == sub]
-                    subset = subset[subset["YEAR"].between(year-2, year)]
-                    if not subset.empty and "ANNUAL" in subset.columns:
-                        avg_rain = subset["ANNUAL"].mean()
-                        answer_lines.append(f"🌧️ Average annual rainfall in **{s}** (last 3 years): {avg_rain:.2f} mm")
-                        provenance.append({
-                            "dataset": "rainfall_data.csv",
-                            "filter": f"SUBDIVISION == '{sub}', YEAR in [{year-2}..{year}]",
-                            "code": f"rain_df[(rain_df['SUBDIVISION']=='{sub}') & (rain_df['YEAR'].between({year-2},{year}))]['ANNUAL'].mean()"
-                        })
+    if not state:
+        return "⚠️ Please mention a valid state name (even approximately).", ""
 
-        # ----- AGRICULTURE DATA -----
-        if not agri_df.empty:
-            for s in states:
-                subset = agri_df[(agri_df["State"].str.contains(s, case=False, na=False)) &
-                                (agri_df["Crop_Year"] == year)]
-                if subset.empty:
-                    continue
+    results = []
+    provenance = []
 
-                # Top crops by production
-                top_crops = (
-                    subset.groupby("Crop")["Production"]
-                    .sum()
-                    .sort_values(ascending=False)
-                    .head(top_n)
-                )
-                crops_str = ", ".join([f"{c} ({p:.1f} tonnes)" for c, p in top_crops.items()])
-                answer_lines.append(f"🌾 Top {top_n} crops in **{s}** for {year}: {crops_str}")
-                provenance.append({
-                    "dataset": "crop_data.xlsx",
-                    "filter": f"State == '{s}', Crop_Year == {year}",
-                    "code": f"agri_df[(agri_df['State'].str.contains('{s}')) & (agri_df['Crop_Year']=={year})].groupby('Crop')['Production'].sum().sort_values(ascending=False).head({top_n})"
-                })
+    # 🌧️ RAINFALL LOGIC
+    if category in ["rainfall", "unknown"] and not rain_df.empty:
+        match = difflib.get_close_matches(state.upper(), rain_df['SUBDIVISION'].astype(str).unique(), n=1, cutoff=0.5)
+        if match:
+            sub = match[0]
+            subset = rain_df[rain_df['SUBDIVISION'] == sub]
+            subset = subset[subset['YEAR'] == year]
+            if not subset.empty:
+                avg_rain = subset['ANNUAL'].mean()
+                results.append(f"🌧️ Average annual rainfall in **{state}** for **{year}**: {avg_rain:.2f} mm")
+                provenance.append(f"rain_df[(SUBDIVISION=='{sub}') & (YEAR=={year})]['ANNUAL'].mean()")
 
-        if not answer_lines:
-            return "❌ No relevant data found for your query.", ""
+    # 🌾 CROP LOGIC
+    if category in ["crop", "unknown"] and not agri_df.empty:
+        subset = agri_df[(agri_df["State"].str.contains(state, case=False, na=False)) &
+                         (agri_df["Crop_Year"] == year)]
+        if crop:
+            subset = subset[subset["Crop"].str.contains(crop, case=False, na=False)]
 
-        final_answer = "\n\n".join(answer_lines)
+        if not subset.empty:
+            top_crops = (
+                subset.groupby("Crop")["Production"]
+                .sum()
+                .sort_values(ascending=False)
+                .head(top_n)
+            )
+            crops_str = ", ".join([f"{c} ({p:.1f} tonnes)" for c, p in top_crops.items()])
+            results.append(f"🌾 Top {top_n} crops in **{state}** for {year}: {crops_str}")
+            if crop:
+                provenance.append(f"agri_df[(State contains '{state}') & (Crop=='{crop}') & (Crop_Year=={year})]")
+            else:
+                provenance.append(f"agri_df[(State contains '{state}') & (Crop_Year=={year})].groupby('Crop')['Production'].sum().head({top_n})")
 
-        prov_block = "\n\n".join([
-            f"**Dataset:** {p['dataset']}\nFilter → {p['filter']}\n```python\n{p['code']}\n```"
-            for p in provenance
-        ])
-        return final_answer, prov_block
+    if not results:
+        return "❌ No matching records found in datasets. Try a different year or state name.", ""
 
-    # -----------------------------------
-    # STREAMLIT UI
-    # -----------------------------------
-    st.title("🌾 Project Samarth — Agriculture & Climate Q&A")
-    st.caption("Ask questions about crop production and rainfall. Answers are based on Indian government datasets.")
+    final_answer = "\n\n".join(results)
+    prov_text = "\n".join([f"```python\n{p}\n```" for p in provenance])
 
-    query = st.text_input(
-        "💬 Ask your question here:",
-        placeholder="Compare rainfall in Telangana and Tamil Nadu for 3 years and top 2 crops by production"
-    )
+    return final_answer, prov_text
 
-    if st.button("Get Answer") and query.strip():
-        with st.spinner("Analyzing your query..."):
-            ans, prov = answer_query(query)
-            st.markdown(ans)
-            if prov:
-                with st.expander("🔍 Provenance — data sources and logic used"):
-                    st.markdown(prov)
+# -----------------------------------
+# STREAMLIT UI
+# -----------------------------------
+st.title("🌾 Project Samarth — Smart Agriculture & Rainfall Chatbot")
+st.caption("Ask about rainfall, crop production, or yield. Type naturally — AI will interpret it!")
 
-    # -----------------------------------
-    # Examples
-    # -----------------------------------
-    st.markdown("---")
-    st.markdown("### 💡 Try these:")
-    st.markdown("""
-    - Compare rainfall in Maharashtra and Karnataka for last 3 years and top 3 crops  
-    - Show top 5 crops in Telangana for 2017  
-    - Compare average rainfall between Tamil Nadu and Kerala  
-    - Find production of Rice in Andhra Pradesh for 2019  
-    """)
+query = st.text_input("💬 Your Question:", placeholder="Ex: Which crops performed best in Telangana 2019?")
 
-    # Optional: Display datasets
-    st.markdown("---")
-    with st.expander("📊 View Raw Datasets"):
-        st.write("**Agriculture Data Preview**")
-        st.dataframe(agri_df.head())
-        st.write("**Rainfall Data Preview**")
-        st.dataframe(rain_df.head())
+if st.button("🔍 Get Answer") and query.strip():
+    with st.spinner("Thinking..."):
+        ans, prov = answer_query(query)
+        st.markdown(ans)
+        if prov:
+            with st.expander("🧩 Logic & Provenance"):
+                st.markdown(prov)
+
+st.markdown("---")
+st.markdown("💡 **Try asking:**")
+st.markdown("- Show rainfall in Telangana for 2015")
+st.markdown("- Top 5 crops in Maharashtra for 2019")
+st.markdown("- Compare rainfall in Tamil Nadu and Kerala for 2011")
+st.markdown("- Which crop produced the most in Andhra Pradesh 2017?")
+st.markdown("- What is the average rainfall in Karnataka?")

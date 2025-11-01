@@ -151,7 +151,7 @@ def answer_query(query):
 # STREAMLIT UI
 # -----------------------------------
 st.title("🌾 Project Samarth — Smart Agriculture & Rainfall Chatbot")
-st.caption("Ask about rainfall, crop production, or yield. Type naturally — AI will interpret it!")
+st.caption("Ask about rainfall, crop production, or yield.")
 
 query = st.text_input("💬 Your Question:", placeholder="Ex: Which crops performed best in Telangana 2019?")
 
@@ -170,3 +170,4 @@ st.markdown("- Top 5 crops in Maharashtra for 2019")
 st.markdown("- Compare rainfall in Tamil Nadu and Kerala for 2011")
 st.markdown("- Which crop produced the most in Andhra Pradesh 2017?")
 st.markdown("- What is the average rainfall in Karnataka?")
+

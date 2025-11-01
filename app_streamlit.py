@@ -268,7 +268,8 @@ def district_extremes_for_crop(state, crop, year):
             (df["Crop"].astype(str).str.lower() == str(crop).lower()) &
             (df["Crop_Year"] == year)
         ]
-        prov.append(f"agri_df[State contains '{state' } & Crop=='{crop}' & Crop_Year=={year}]")
+        prov.append(f"agri_df[State contains '{state}' & Crop=='{crop}' & Crop_Year=={year}]")
+
         if subset.empty:
             return None, None, prov
         subset["Production"] = pd.to_numeric(subset["Production"], errors="coerce").fillna(0)
@@ -432,3 +433,4 @@ if st.button("🔍 Get Answer") and query.strip():
 st.markdown("---")
 st.markdown("💡 Tips for the 2-minute Loom:")
 st.markdown("- Show the Streamlit app answering 1) a two-state comparison and 2) a single-state + top crops query.  \n- Expand the Provenance to show how each number maps to a dataset slice.  \n- Mention where you'd plug in data.gov.in APIs for live updates.")
+

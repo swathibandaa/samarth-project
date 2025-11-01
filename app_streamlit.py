@@ -2,8 +2,8 @@ import streamlit as st
 import pandas as pd
 
 # 🌾 Load datasets
-rainfall_data = pd.read_csv("rainfall_data.csv")
-crop_data = pd.read_excel("crop_production.xlsx")
+rainfall_data = pd.read_csv("rainfall.csv")
+crop_data = pd.read_excel("crop.xlsx")
 
 # 🌦️ Chatbot UI
 st.title("🌾 Project Samarth — Smart Agriculture & Rainfall Q&A")
@@ -87,3 +87,4 @@ st.markdown("### 💡 **Try asking:**")
 st.markdown("- Show rainfall in Telangana for 2015")
 st.markdown("- Top 5 crops in Maharashtra for 2019")
 st.markdown("- Compare rainfall in Tamil Nadu and Kerala for 2013")
+

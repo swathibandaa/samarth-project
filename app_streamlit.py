@@ -159,8 +159,9 @@ if st.button("🔍 Get Answer") and query.strip():
 
 st.markdown("---")
 st.markdown("💡 **Try asking:**")
-st.markdown("- Show rainfall in Telangana for 2019")
-st.markdown("- Top 5 crops in Maharashtra for 2020")
-st.markdown("- Compare rainfall in Tamil Nadu and Kerala for 2018")
+st.markdown("- Show rainfall in Telangana for 2015")
+st.markdown("- Top 5 crops in Maharashtra for 2019")
+st.markdown("- Compare rainfall in Tamil Nadu and Kerala for 2011")
 st.markdown("- Which crop produced the most in Andhra Pradesh 2017?")
 st.markdown("- What is the average rainfall in Karnataka?")
+

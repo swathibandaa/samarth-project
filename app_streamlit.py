@@ -135,7 +135,7 @@ def answer_query(query):
             crops_str = ", ".join([f"{c} ({p:.1f} tonnes)" for c, p in top_crops.items()])
             results.append(f"🌾 Top {top_n} crops in **{state}** for {year}: {crops_str}")
             if crop:
-                provenance.append(f"agri_df[(State contains '{state'}) & (Crop=='{crop}') & (Crop_Year=={year})]")
+                provenance.append(f"agri_df[(State contains '{state'}) & (Crop=='{crop'}) & (Crop_Year=={year})]")
             else:
                 provenance.append(f"agri_df[(State contains '{state'}) & (Crop_Year=={year})].groupby('Crop')['Production'].sum().head({top_n})")
 
@@ -170,4 +170,5 @@ st.markdown("- Top 5 crops in Maharashtra for 2019")
 st.markdown("- Compare rainfall in Tamil Nadu and Kerala for 2011")
 st.markdown("- Which crop produced the most in Andhra Pradesh 2017?")
 st.markdown("- What is the average rainfall in Karnataka?")
+
 

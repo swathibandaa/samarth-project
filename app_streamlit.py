@@ -3,20 +3,14 @@ import pandas as pd
 import re
 import difflib
 
-# -----------------------------------
-# Streamlit Page Config
-# -----------------------------------
-st.set_page_config(page_title="🌾 Project Samarth - Smart Agriculture Chatbot", layout="centered")
+st.set_page_config(page_title="🌾Project Samarth:Smart Agriculture Chatbot", layout="centered")
 
-# -----------------------------------
+
 # Dataset Paths
-# -----------------------------------
-AGRI_PATH = "crop.xlsx"        # Excel file (Agriculture)
-RAINFALL_PATH = "rainfall.csv" # CSV file (Rainfall)
 
-# -----------------------------------
-# Load Datasets
-# -----------------------------------
+AGRI_PATH = "crop.xlsx"        
+RAINFALL_PATH = "rainfall.csv" 
+
 @st.cache_data
 def load_data():
     try:
@@ -40,13 +34,11 @@ if agri_df.empty or rain_df.empty:
 else:
     st.success("✅ Datasets loaded successfully!")
 
-# Normalize column names
+
 agri_df.columns = [c.strip().title() for c in agri_df.columns]
 rain_df.columns = [c.strip().upper() for c in rain_df.columns]
 
-# -----------------------------------
-# Helper Functions
-# -----------------------------------
+
 STATES = sorted(agri_df['State'].dropna().unique())
 
 def fuzzy_match_state(name):
@@ -90,9 +82,7 @@ def detect_category(query):
     else:
         return "unknown"
 
-# -----------------------------------
-# Core Q&A Logic
-# -----------------------------------
+
 def answer_query(query):
     state = extract_state(query)
     crop = extract_crop(query)
@@ -118,7 +108,7 @@ def answer_query(query):
                 results.append(f"🌧️ Average annual rainfall in **{state}** for **{year}**: {avg_rain:.2f} mm")
                 provenance.append(f"rain_df[(SUBDIVISION=='{sub}') & (YEAR=={year})]['ANNUAL'].mean()")
 
-    # 🌾 CROP LOGIC
+
     if category in ["crop", "unknown"] and not agri_df.empty:
         subset = agri_df[(agri_df["State"].str.contains(state, case=False, na=False)) &
                          (agri_df["Crop_Year"] == year)]
@@ -147,9 +137,6 @@ def answer_query(query):
 
     return final_answer, prov_text
 
-# -----------------------------------
-# STREAMLIT UI
-# -----------------------------------
 st.title("🌾 Project Samarth:Smart Agriculture & Rainfall Chatbot")
 st.caption("Ask about rainfall, crop production, or yield.")
 
@@ -170,5 +157,6 @@ st.markdown("- Top 5 crops in Maharashtra for 2019")
 st.markdown("- Compare rainfall in Tamil Nadu and Kerala for 2011")
 st.markdown("- Which crop produced the most in Andhra Pradesh 2017?")
 st.markdown("- What is the average rainfall in Karnataka?")
+
 
 

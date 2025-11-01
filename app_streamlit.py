@@ -3,7 +3,7 @@ import pandas as pd
 import re
 import difflib
 
-st.set_page_config(page_title="🌾Project Samarth:Smart Agriculture Chatbot", layout="centered")
+st.set_page_config(page_title="Project Samarth:Smart Agriculture Chatbot", layout="centered")
 
 
 # Dataset Paths
@@ -147,7 +147,7 @@ if st.button("🔍 Get Answer") and query.strip():
         ans, prov = answer_query(query)
         st.markdown(ans)
         if prov:
-            with st.expander("🧩 Logic & Provenance"):
+            with st.expander(" Logic & Provenance"):
                 st.markdown(prov)
 
 st.markdown("---")
@@ -157,6 +157,7 @@ st.markdown("- Top 5 crops in Maharashtra for 2019")
 st.markdown("- Compare rainfall in Tamil Nadu and Kerala for 2011")
 st.markdown("- Which crop produced the most in Andhra Pradesh 2017?")
 st.markdown("- What is the average rainfall in Karnataka?")
+
 
 
 
